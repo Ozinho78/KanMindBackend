@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
 # from rest_framework.authtoken.models import Token
 # import re
 
@@ -24,8 +25,46 @@ class RegistrationUserSerializer(serializers.ModelSerializer):
         return user
 
 
+# class LoginSerializer(serializers.Serializer):
+#     email = serializers.EmailField()
+#     password = serializers.CharField(write_only=True)
+
+#     def validate(self, data):
+#         email = data.get("email")
+#         password = data.get("password")
+
+#         try:
+#             user = User.objects.get(email=email)
+#         except User.DoesNotExist:
+#             raise serializers.ValidationError({"email": "E-Mail-Adresse nicht gefunden."})
+
+#         user = authenticate(username=user.username, password=password)
+#         if not user:
+#             raise serializers.ValidationError({"password": "Falsches Passwort."})
+
+#         data["user"] = user
+#         return data
 
 
+class EmailLoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        email = data.get("email")
+        password = data.get("password")
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"email": "E-Mail-Adresse nicht gefunden."})
+
+        user = authenticate(username=user.username, password=password)
+        if not user:
+            raise serializers.ValidationError({"password": "Falsches Passwort."})
+
+        data["user"] = user
+        return data
 
 
 
