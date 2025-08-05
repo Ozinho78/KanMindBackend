@@ -92,3 +92,5 @@ up.bat
 Infos/
 KanMindFrontend/
 sources/
+kanmind/generate_dummy_data.py
+

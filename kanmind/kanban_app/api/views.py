@@ -2,11 +2,14 @@ from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
-from kanban_app.api.serializers import RegistrationUserSerializer, EmailLoginSerializer
+from kanban_app.api.serializers import RegistrationUserSerializer, EmailLoginSerializer, BoardListSerializer, BoardDetailSerializer
+from kanban_app.models import Board
 from kanban_app.utils.validators import validate_email_format, validate_email_unique, validate_fullname, validate_password_strength
+from django.db.models import Q
 
 
 class RegistrationUserView(generics.CreateAPIView):
+    """Creates, saves and validates new user"""
     serializer_class = RegistrationUserSerializer
     permission_classes = [permissions.AllowAny]
 
@@ -59,13 +62,7 @@ class RegistrationUserView(generics.CreateAPIView):
             )
 
         except Exception as e:
-            return Response(
-                {
-                    "message": "Interner Serverfehler.",
-                    "details": str(e)
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class EmailLoginView(APIView):
@@ -99,16 +96,22 @@ class EmailLoginView(APIView):
             return Response({"error": error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+class BoardListCreateView(generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = BoardListSerializer
 
-class BoardsView(APIView):
-    pass
+    def get_queryset(self):
+        user = self.request.user
+        return Board.objects.filter(Q(owner=user) | Q(members=user)).distinct()
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
 
+class BoardDetailView(generics.RetrieveAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = BoardDetailSerializer
 
-
-
-
-
-
-
-
+    def get_queryset(self):
+        user = self.request.user
+        return Board.objects.filter(Q(owner=user) | Q(members=user)).distinct()
