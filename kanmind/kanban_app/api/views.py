@@ -5,7 +5,7 @@ from rest_framework.authtoken.models import Token
 from kanban_app.api.serializers import RegistrationUserSerializer, EmailLoginSerializer, BoardListSerializer, BoardDetailSerializer
 from kanban_app.models import Board
 from kanban_app.utils.validators import validate_email_format, validate_email_unique, validate_fullname, validate_password_strength
-from django.db.models import Q
+from kanban_app.api.mixins import UserBoardsQuerysetMixin
 
 
 class RegistrationUserView(generics.CreateAPIView):
@@ -96,22 +96,14 @@ class EmailLoginView(APIView):
             return Response({"error": error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class BoardListCreateView(generics.ListCreateAPIView):
+class BoardListCreateView(UserBoardsQuerysetMixin, generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = BoardListSerializer
-
-    def get_queryset(self):
-        user = self.request.user
-        return Board.objects.filter(Q(owner=user) | Q(members=user)).distinct()
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
 
-class BoardDetailView(generics.RetrieveAPIView):
+class BoardDetailView(UserBoardsQuerysetMixin, generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = BoardDetailSerializer
-
-    def get_queryset(self):
-        user = self.request.user
-        return Board.objects.filter(Q(owner=user) | Q(members=user)).distinct()
