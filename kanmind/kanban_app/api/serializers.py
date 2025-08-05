@@ -1,10 +1,7 @@
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from kanban_app.models import Board, Task
-
-User = get_user_model()
 
 class RegistrationUserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -64,17 +61,7 @@ class TaskSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Task
-        fields = [
-            "id",
-            "title",
-            "description",
-            "status",
-            "priority",
-            "assignee",
-            "reviewer",
-            "due_date",
-            "comments_count",
-        ]
+        fields = ["id", "title", "description", "status", "priority", "assignee", "reviewer", "due_date", "comments_count",]
 
 
 class BoardListSerializer(serializers.ModelSerializer):
@@ -92,16 +79,7 @@ class BoardListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Board
-        fields = [
-            "id",
-            "title",
-            "members",  # write_only → wird nur zum Erstellen verwendet
-            "member_count",
-            "ticket_count",
-            "tasks_to_do_count",
-            "tasks_high_prio_count",
-            "owner_id"
-        ]
+        fields = ["id", "title", "members", "member_count", "ticket_count", "tasks_to_do_count", "tasks_high_prio_count", "owner_id"]
 
     def create(self, validated_data):
         members = validated_data.pop("members", [])
