@@ -4,6 +4,6 @@ from kanban_app.api.views import RegistrationUserView, EmailLoginView, BoardList
 urlpatterns = [
     path('login/', EmailLoginView.as_view(), name='login-user'),
     path('registration/', RegistrationUserView.as_view(), name='register-user'),
-    path('api/boards/', BoardListCreateView.as_view(), name='board-list-create'),
-    path('api/boards/<int:pk>/', BoardDetailView.as_view(), name='board-detail'),
+    path('boards/', BoardListCreateView.as_view(), name='board-list-create'),
+    path('boards/<int:pk>/', BoardDetailView.as_view(), name='board-detail'),
 ]

@@ -79,6 +79,12 @@ class TaskSerializer(serializers.ModelSerializer):
 
 class BoardListSerializer(serializers.ModelSerializer):
     owner_id = serializers.ReadOnlyField(source="owner.id")
+    members = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=User.objects.all(),
+        required=False,
+        write_only=True  # nur beim POST verwenden, nicht in der Response anzeigen
+    )
     member_count = serializers.SerializerMethodField()
     ticket_count = serializers.SerializerMethodField()
     tasks_to_do_count = serializers.SerializerMethodField()
@@ -89,12 +95,20 @@ class BoardListSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "title",
+            "members",  # write_only → wird nur zum Erstellen verwendet
             "member_count",
             "ticket_count",
             "tasks_to_do_count",
             "tasks_high_prio_count",
             "owner_id"
         ]
+
+    def create(self, validated_data):
+        members = validated_data.pop("members", [])
+        board = Board.objects.create(**validated_data)
+        if members:
+            board.members.set(members)
+        return board
 
     def get_member_count(self, obj):
         return obj.members.count()
