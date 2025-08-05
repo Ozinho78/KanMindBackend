@@ -3,7 +3,6 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from kanban_app.api.serializers import RegistrationUserSerializer, EmailLoginSerializer, BoardListSerializer, BoardDetailSerializer
-from kanban_app.models import Board
 from kanban_app.utils.validators import validate_email_format, validate_email_unique, validate_fullname, validate_password_strength
 from kanban_app.api.mixins import UserBoardsQuerysetMixin
 
