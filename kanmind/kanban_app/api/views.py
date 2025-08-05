@@ -5,6 +5,7 @@ from rest_framework.authtoken.models import Token
 from kanban_app.api.serializers import RegistrationUserSerializer, EmailLoginSerializer, BoardListSerializer, BoardDetailSerializer
 from kanban_app.utils.validators import validate_email_format, validate_email_unique, validate_fullname, validate_password_strength
 from kanban_app.api.mixins import UserBoardsQuerysetMixin
+from kanban_app.api.permissions import IsBoardOwnerOrMember
 
 
 class RegistrationUserView(generics.CreateAPIView):
@@ -90,19 +91,32 @@ class EmailLoginView(APIView):
                 status=status.HTTP_200_OK
             )
 
-        except Exception as e:
-            error = str(e)
-            return Response({"error": error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except:
+            return Response({"error": "Interner Serverfehler"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class BoardListCreateView(UserBoardsQuerysetMixin, generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = BoardListSerializer
 
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.get_queryset()
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception:
+            return Response({"error": "Interner Serverfehler"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+        try:
+            serializer.save(owner=self.request.user)
+        except Exception:
+            return Response({"error": "Fehler beim Erstellen des Boards"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class BoardDetailView(UserBoardsQuerysetMixin, generics.RetrieveAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsBoardOwnerOrMember]
     serializer_class = BoardDetailSerializer
+    
+
+                                
