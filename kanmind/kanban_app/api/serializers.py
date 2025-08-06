@@ -102,10 +102,12 @@ class BoardListSerializer(serializers.ModelSerializer):
 
 
 class BoardDetailSerializer(serializers.ModelSerializer):
-    owner_id = serializers.ReadOnlyField(source="owner.id")
-    members = UserShortSerializer(many=True, read_only=True)
+    owner_data = UserShortSerializer(source="owner", read_only=True)
+    members = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, write_only=True)
+    members_data = UserShortSerializer(source="members", many=True, read_only=True)
     tasks = TaskSerializer(many=True, read_only=True)
 
     class Meta:
         model = Board
-        fields = ["id", "title", "owner_id", "members", "tasks"]
+        fields = ["id", "title", "owner_data", "members", "members_data", "tasks"]
+        read_only_fields = ["id", "owner_data", "members_data", "tasks"]

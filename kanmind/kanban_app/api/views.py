@@ -1,8 +1,10 @@
+from django.contrib.auth.models import User
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
-from kanban_app.api.serializers import RegistrationUserSerializer, EmailLoginSerializer, BoardListSerializer, BoardDetailSerializer
+from kanban_app.models import Board
+from kanban_app.api.serializers import RegistrationUserSerializer, EmailLoginSerializer, BoardListSerializer, BoardDetailSerializer, UserShortSerializer
 from kanban_app.utils.validators import validate_email_format, validate_email_unique, validate_fullname, validate_password_strength
 from kanban_app.utils.exceptions import exception_handler_status500
 from kanban_app.api.mixins import UserBoardsQuerysetMixin
@@ -119,9 +121,43 @@ class BoardListCreateView(UserBoardsQuerysetMixin, generics.ListCreateAPIView):
             # return Response(error_message, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class BoardDetailView(UserBoardsQuerysetMixin, generics.RetrieveAPIView):
+class BoardDetailView(UserBoardsQuerysetMixin, generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsBoardOwnerOrMember]
     serializer_class = BoardDetailSerializer
-    
 
-                                
+    def destroy(self, request, *args, **kwargs):
+        try:
+            board = self.get_object()
+            board.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        except Board.DoesNotExist:
+            return Response({"error": "Board nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
+        except:
+            return exception_handler_status500()
+        
+        
+class MailCheckView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            email = request.query_params.get("email", "").strip()
+
+            if not email:
+                return Response({"error": "E-Mail-Adresse fehlt."}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                validate_email_format(email)
+            except:
+                return Response({"error": "Ungültige E-Mail-Adresse."}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                user = User.objects.get(email=email)
+                serializer = UserShortSerializer(user)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            except User.DoesNotExist:
+                return Response({"error": "E-Mail nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
+
+        except:
+            return exception_handler_status500()

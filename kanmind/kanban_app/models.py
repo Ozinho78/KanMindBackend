@@ -4,7 +4,7 @@ from django.db import models
 
 class RegistrationUserModel(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    fullname = models.CharField(max_length=255)
+    fullname = models.CharField(max_length=100)
 
     def __str__(self):
         return self.fullname
@@ -37,5 +37,14 @@ class Task(models.Model):
 
     @property
     def comments_count(self):
-        # Falls es ein Comment-Modell gibt:
-        return self.comments.count() if hasattr(self, "comments") else 0
+        return self.comments.count()
+    
+    
+class Comment(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="comments")
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.CharField(max_length=600)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comment by {self.author.username} on {self.task.title}"
