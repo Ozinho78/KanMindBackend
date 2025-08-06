@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from kanban_app.api.serializers import RegistrationUserSerializer, EmailLoginSerializer, BoardListSerializer, BoardDetailSerializer
 from kanban_app.utils.validators import validate_email_format, validate_email_unique, validate_fullname, validate_password_strength
+from kanban_app.utils.exceptions import exception_handler_status500
 from kanban_app.api.mixins import UserBoardsQuerysetMixin
 from kanban_app.api.permissions import IsBoardOwnerOrMember
 
@@ -47,9 +48,9 @@ class RegistrationUserView(generics.CreateAPIView):
             """Create token"""
             token, created = Token.objects.get_or_create(user=user)
 
-            if not created:
-                error_message = {"token": "Ein Token für diesen Benutzer existiert bereits."}
-                return Response(error_message, status=status.HTTP_409_CONFLICT)
+            # if not created:
+            #     error_message = {"token": "Ein Token für diesen Benutzer existiert bereits."}
+            #     return Response(error_message, status=status.HTTP_409_CONFLICT)
 
             return Response(
                 {
@@ -60,9 +61,9 @@ class RegistrationUserView(generics.CreateAPIView):
                 },
                 status=status.HTTP_201_CREATED
             )
-
-        except Exception as e:
-            return Response({"details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        except:
+            exception_handler_status500()
 
 
 class EmailLoginView(APIView):
@@ -76,10 +77,11 @@ class EmailLoginView(APIView):
 
             account = serializer.validated_data["user"]
 
-            """Request Token"""
-            token = Token.objects.filter(user=account).first()
-            if not token:
-                return Response({"error": "Kein Token vorhanden."}, status=status.HTTP_409_CONFLICT)
+            """Request Token or create Token"""
+            # token = Token.objects.filter(user=account).first()
+            # if not token:
+            #     return Response({"error": "Kein Token vorhanden."}, status=status.HTTP_409_CONFLICT)
+            token, created = Token.objects.get_or_create(user=account)
 
             return Response(
                 {
@@ -92,7 +94,7 @@ class EmailLoginView(APIView):
             )
 
         except:
-            return Response({"error": "Interner Serverfehler"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            exception_handler_status500()
 
 
 class BoardListCreateView(UserBoardsQuerysetMixin, generics.ListCreateAPIView):
@@ -104,14 +106,17 @@ class BoardListCreateView(UserBoardsQuerysetMixin, generics.ListCreateAPIView):
             queryset = self.get_queryset()
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        except Exception:
-            return Response({"error": "Interner Serverfehler"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except:
+            error_message = {"error": "Interner Serverfehler"}
+            return Response(error_message, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def perform_create(self, serializer):
         try:
             serializer.save(owner=self.request.user)
-        except Exception:
-            return Response({"error": "Fehler beim Erstellen des Boards"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except:
+            exception_handler_status500()
+            # error_message = {"error": "Interner Serverfehler"}
+            # return Response(error_message, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class BoardDetailView(UserBoardsQuerysetMixin, generics.RetrieveAPIView):
