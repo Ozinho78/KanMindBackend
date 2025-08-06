@@ -180,7 +180,6 @@ class TaskCreateView(generics.CreateAPIView):
             except Board.DoesNotExist:
                 return Response({"error": "Board nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
 
-            # Zugriff prüfen (Owner oder Member)
             self.check_object_permissions(request, board)
 
             assignee_id = request.data.get("assignee_id")
@@ -197,19 +196,47 @@ class TaskCreateView(generics.CreateAPIView):
             if errors:
                 return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
-            # Task speichern
-            serializer = self.get_serializer(
-                data=request.data, context={"request": request})
+            serializer = self.get_serializer(data=request.data, context={"request": request})
             serializer.is_valid(raise_exception=True)
             task = serializer.save()
 
-            # Ausgabe im gewünschten Format
             try:
                 response_serializer = TaskSerializer(task)
                 return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-            except Exception as e:
-                print("❌ Fehler bei der Response-Serialisierung:", e)
+            except:
                 return Response({"error": "Fehler beim Serialisieren des Tasks"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        except:
+            return exception_handler_status500()
+        
+        
+class TasksAssignedToMeView(generics.ListAPIView):
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Task.objects.filter(assignee=self.request.user)
+
+    def get(self, request, *args, **kwargs):
+        try:
+            queryset = self.get_queryset()
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return exception_handler_status500(e, self.get_exception_handler_context())
+
+
+class TasksReviewedByMeView(generics.ListAPIView):
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Task.objects.filter(reviewer=self.request.user)
+
+    def get(self, request, *args, **kwargs):
+        try:
+            queryset = self.get_queryset()
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return exception_handler_status500(e, self.get_exception_handler_context())
