@@ -3,8 +3,8 @@ from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
-from kanban_app.models import Board
-from kanban_app.api.serializers import RegistrationUserSerializer, EmailLoginSerializer, BoardListSerializer, BoardDetailSerializer, UserShortSerializer
+from kanban_app.models import Board, Task
+from kanban_app.api.serializers import RegistrationUserSerializer, EmailLoginSerializer, BoardListSerializer, BoardDetailSerializer, UserShortSerializer, TaskSerializer, TaskCreateSerializer
 from kanban_app.utils.validators import validate_email_format, validate_email_unique, validate_fullname, validate_password_strength
 from kanban_app.utils.exceptions import exception_handler_status500
 from kanban_app.api.mixins import UserBoardsQuerysetMixin
@@ -29,7 +29,8 @@ class RegistrationUserView(generics.CreateAPIView):
             validate_email_unique(email)
 
             if password != repeated_password:
-                error_message = {"password": "Passwörter stimmen nicht überein."}
+                error_message = {
+                    "password": "Passwörter stimmen nicht überein."}
                 return Response(error_message, status=status.HTTP_400_BAD_REQUEST)
 
             validate_password_strength(password)
@@ -63,7 +64,7 @@ class RegistrationUserView(generics.CreateAPIView):
                 },
                 status=status.HTTP_201_CREATED
             )
-        
+
         except:
             exception_handler_status500()
 
@@ -135,8 +136,8 @@ class BoardDetailView(UserBoardsQuerysetMixin, generics.RetrieveUpdateDestroyAPI
             return Response({"error": "Board nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
         except:
             return exception_handler_status500()
-        
-        
+
+
 class MailCheckView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -161,3 +162,54 @@ class MailCheckView(APIView):
 
         except:
             return exception_handler_status500()
+
+
+class TaskCreateView(generics.CreateAPIView):
+    queryset = Task.objects.all()
+    serializer_class = TaskCreateSerializer
+    permission_classes = [permissions.IsAuthenticated, IsBoardOwnerOrMember]
+
+    def create(self, request, *args, **kwargs):
+        try:
+            board_id = request.data.get("board")
+            if not board_id:
+                return Response({"board": "Dieses Feld wird benötigt."}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                board = Board.objects.get(id=board_id)
+            except Board.DoesNotExist:
+                return Response({"error": "Board nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
+
+            # Zugriff prüfen (Owner oder Member)
+            self.check_object_permissions(request, board)
+
+            assignee_id = request.data.get("assignee_id")
+            reviewer_id = request.data.get("reviewer_id")
+
+            allowed_user_ids = list(board.members.values_list(
+                "id", flat=True)) + [board.owner.id]
+            errors = {}
+
+            if assignee_id and int(assignee_id) not in allowed_user_ids:
+                errors["assignee_id"] = "Assignee ist kein Mitglied dieses Boards."
+            if reviewer_id and int(reviewer_id) not in allowed_user_ids:
+                errors["reviewer_id"] = "Reviewer ist kein Mitglied dieses Boards."
+            if errors:
+                return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+            # Task speichern
+            serializer = self.get_serializer(
+                data=request.data, context={"request": request})
+            serializer.is_valid(raise_exception=True)
+            task = serializer.save()
+
+            # Ausgabe im gewünschten Format
+            try:
+                response_serializer = TaskSerializer(task)
+                return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                print("❌ Fehler bei der Response-Serialisierung:", e)
+                return Response({"error": "Fehler beim Serialisieren des Tasks"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except Exception as e:
+            return exception_handler_status500(e, self.get_exception_handler_context())

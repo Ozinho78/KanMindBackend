@@ -55,13 +55,12 @@ class UserShortSerializer(serializers.ModelSerializer):
 
 
 class TaskSerializer(serializers.ModelSerializer):
-    assignee = UserShortSerializer(read_only=True)
-    reviewer = UserShortSerializer(read_only=True)
-    comments_count = serializers.IntegerField(read_only=True)
+    assignee = UserShortSerializer(read_only=True, allow_null=True)
+    reviewer = UserShortSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = Task
-        fields = ["id", "title", "description", "status", "priority", "assignee", "reviewer", "due_date", "comments_count",]
+        fields = ["id", "title", "description", "status", "priority", "assignee", "reviewer", "due_date"]
 
 
 class BoardListSerializer(serializers.ModelSerializer):
@@ -111,3 +110,26 @@ class BoardDetailSerializer(serializers.ModelSerializer):
         model = Board
         fields = ["id", "title", "owner_data", "members", "members_data", "tasks"]
         read_only_fields = ["id", "owner_data", "members_data", "tasks"]
+
+
+class TaskCreateSerializer(serializers.ModelSerializer):
+    assignee_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    reviewer_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+
+    class Meta:
+        model = Task
+        fields = [
+            "id", "board", "title", "description", "status", "priority",
+            "assignee_id", "reviewer_id", "due_date"
+        ]
+
+    def create(self, validated_data):
+        assignee_id = validated_data.pop("assignee_id", None)
+        reviewer_id = validated_data.pop("reviewer_id", None)
+
+        if assignee_id:
+            validated_data["assignee"] = User.objects.filter(id=assignee_id).first()
+        if reviewer_id:
+            validated_data["reviewer"] = User.objects.filter(id=reviewer_id).first()
+
+        return Task.objects.create(**validated_data)
