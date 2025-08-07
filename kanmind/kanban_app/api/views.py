@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.db import models
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -238,5 +239,75 @@ class TasksReviewedByMeView(generics.ListAPIView):
             queryset = self.get_queryset()
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return exception_handler_status500(e, self.get_exception_handler_context())
+
+
+class TasksInvolvedView(generics.ListAPIView):
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Task.objects.filter(
+            models.Q(assignee=self.request.user) |
+            models.Q(reviewer=self.request.user)
+        ).distinct()
+
+    def get(self, request, *args, **kwargs):
+        try:
+            queryset = self.get_queryset()
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return exception_handler_status500(e, self.get_exception_handler_context())
+
+
+class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Task.objects.all()
+    serializer_class = TaskCreateSerializer  # derselbe wie beim Erstellen
+    permission_classes = [permissions.IsAuthenticated, IsBoardOwnerOrMember]
+
+    def get_object(self):
+        task = super().get_object()
+        self.check_object_permissions(self.request, task.board)
+        return task
+
+    def patch(self, request, *args, **kwargs):
+        try:
+            task = self.get_object()
+
+            assignee_id = request.data.get("assignee_id")
+            reviewer_id = request.data.get("reviewer_id")
+
+            allowed_user_ids = list(task.board.members.values_list("id", flat=True)) + [task.board.owner.id]
+            errors = {}
+
+            if assignee_id and int(assignee_id) not in allowed_user_ids:
+                errors["assignee_id"] = "Assignee ist kein Mitglied dieses Boards."
+            if reviewer_id and int(reviewer_id) not in allowed_user_ids:
+                errors["reviewer_id"] = "Reviewer ist kein Mitglied dieses Boards."
+            if errors:
+                return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+            partial = kwargs.pop("partial", True)
+            serializer = self.get_serializer(task, data=request.data, partial=partial, context={"request": request})
+            serializer.is_valid(raise_exception=True)
+            updated_task = serializer.save()
+
+            response_serializer = TaskSerializer(updated_task)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+        except Task.DoesNotExist:
+            return Response({"error": "Task nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return exception_handler_status500(e, self.get_exception_handler_context())
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            task = self.get_object()
+            task.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Task.DoesNotExist:
+            return Response({"error": "Task nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return exception_handler_status500(e, self.get_exception_handler_context())
