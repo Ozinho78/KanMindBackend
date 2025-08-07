@@ -197,7 +197,8 @@ class TaskCreateView(generics.CreateAPIView):
             if errors:
                 return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
-            serializer = self.get_serializer(data=request.data, context={"request": request})
+            serializer = self.get_serializer(
+                data=request.data, context={"request": request})
             serializer.is_valid(raise_exception=True)
             task = serializer.save()
 
@@ -209,8 +210,8 @@ class TaskCreateView(generics.CreateAPIView):
 
         except:
             return exception_handler_status500()
-        
-        
+
+
 class TasksAssignedToMeView(generics.ListAPIView):
     serializer_class = TaskSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -264,11 +265,12 @@ class TasksInvolvedView(generics.ListAPIView):
 
 class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Task.objects.all()
-    serializer_class = TaskCreateSerializer  # derselbe wie beim Erstellen
+    serializer_class = TaskCreateSerializer  # wird für PATCH benutzt
     permission_classes = [permissions.IsAuthenticated, IsBoardOwnerOrMember]
 
     def get_object(self):
         task = super().get_object()
+        # Zugriff auf das zugehörige Board prüfen
         self.check_object_permissions(self.request, task.board)
         return task
 
@@ -276,10 +278,11 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
         try:
             task = self.get_object()
 
+            # Gültige Assignee/Reviewer prüfen
             assignee_id = request.data.get("assignee_id")
             reviewer_id = request.data.get("reviewer_id")
-
-            allowed_user_ids = list(task.board.members.values_list("id", flat=True)) + [task.board.owner.id]
+            allowed_user_ids = list(task.board.members.values_list(
+                "id", flat=True)) + [task.board.owner.id]
             errors = {}
 
             if assignee_id and int(assignee_id) not in allowed_user_ids:
@@ -289,11 +292,13 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
             if errors:
                 return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
-            partial = kwargs.pop("partial", True)
-            serializer = self.get_serializer(task, data=request.data, partial=partial, context={"request": request})
+            # Teilweise Aktualisierung
+            serializer = self.get_serializer(
+                task, data=request.data, partial=True, context={"request": request})
             serializer.is_valid(raise_exception=True)
             updated_task = serializer.save()
 
+            # Ausgabe im Response-Format
             response_serializer = TaskSerializer(updated_task)
             return Response(response_serializer.data, status=status.HTTP_200_OK)
 
