@@ -1,11 +1,12 @@
 from django.contrib.auth.models import User
+from django.shortcuts import get_object_or_404
 from django.db import models
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
-from kanban_app.models import Board, Task
-from kanban_app.api.serializers import RegistrationUserSerializer, EmailLoginSerializer, BoardListSerializer, BoardDetailSerializer, UserShortSerializer, TaskSerializer, TaskCreateSerializer
+from kanban_app.models import Board, Task, Comment
+from kanban_app.api.serializers import RegistrationUserSerializer, EmailLoginSerializer, BoardListSerializer, BoardDetailSerializer, UserShortSerializer, TaskSerializer, TaskCreateSerializer, CommentSerializer
 from kanban_app.utils.validators import validate_email_format, validate_email_unique, validate_fullname, validate_password_strength
 from kanban_app.utils.exceptions import exception_handler_status500
 from kanban_app.api.mixins import UserBoardsQuerysetMixin
@@ -312,3 +313,66 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
             return Response({"error": "Task nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return exception_handler_status500(e, self.get_exception_handler_context())
+
+
+class CommentsListCreateView(APIView):
+    """
+    """
+    permission_classes = [permissions.IsAuthenticated, IsBoardOwnerOrMember]
+
+    def get_task(self, task_id):
+        return get_object_or_404(Task, pk=task_id)
+
+    def get(self, request, task_id, *args, **kwargs):
+        try:
+            task = self.get_task(task_id)
+            self.check_object_permissions(request, task)
+            comments = task.comments.select_related("author").order_by("created_at")
+            return Response(CommentSerializer(comments, many=True).data, status=status.HTTP_200_OK)
+        except Task.DoesNotExist:
+            return Response({"error": "Task nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as exc:
+            return exception_handler_status500(exc, context=None)
+
+    def post(self, request, task_id, *args, **kwargs):
+        try:
+            task = self.get_task(task_id)
+            self.check_object_permissions(request, task)
+            content = (request.data.get("content") or "").strip()
+            if not content:
+                return Response({"content": "Darf nicht leer sein."}, status=status.HTTP_400_BAD_REQUEST)
+            comment = Comment.objects.create(task=task, author=request.user, content=content)
+            return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
+        
+        except Task.DoesNotExist:
+            return Response({"error": "Task nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
+        
+        except Exception as exc:
+            return exception_handler_status500(exc, context=None)
+
+
+class CommentDeleteView(APIView):
+    """"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, task_id, comment_id, *args, **kwargs):
+        try:
+            task = get_object_or_404(Task, pk=task_id)
+            board = task.board
+            perm = IsBoardOwnerOrMember()
+            if not perm.has_object_permission(request, self, board):
+                return Response({"error": perm.message}, status=status.HTTP_403_FORBIDDEN)
+            comment = Comment.objects.filter(pk=comment_id, task=task).first()
+            if not comment:
+                return Response({"error": "Kommentar nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
+            if comment.author_id != request.user.id:
+                return Response({"error": "Kein Recht zum Löschen dieses Kommentars."}, status=status.HTTP_403_FORBIDDEN)
+            comment.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        
+        except Task.DoesNotExist:
+            return Response({"error": "Task nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
+        
+        except Exception as exc:
+            return exception_handler_status500(exc, context=None)
+

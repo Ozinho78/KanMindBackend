@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
-from kanban_app.models import Board, Task
+from kanban_app.models import Board, Task, Comment
 
 class RegistrationUserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -125,3 +125,16 @@ class TaskCreateSerializer(serializers.ModelSerializer):
             validated_data["reviewer"] = User.objects.filter(id=reviewer_id).first()
 
         return Task.objects.create(**validated_data)
+    
+    
+class CommentSerializer(serializers.ModelSerializer):
+    author = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Comment
+        fields = ["id", "created_at", "author", "content"]
+
+    def get_author(self, obj):
+        fullname = f"{obj.author.first_name} {obj.author.last_name}".strip()
+        return fullname or obj.author.username or obj.author.email
+

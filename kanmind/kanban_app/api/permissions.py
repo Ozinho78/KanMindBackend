@@ -6,11 +6,21 @@ class IsBoardOwnerOrMember(BasePermission):
     message = "Kein Zugriff auf dieses Board."
 
     def has_object_permission(self, request, view, obj):
-        """If it's a task object -> access over Board"""
-        if hasattr(obj, "board"):
-            board = obj.board
-        else:
+        """Attributes needs to be checked to avoid unwanted error messages"""
+        
+        # Attributes for board
+        if hasattr(obj, "owner") and hasattr(obj, "members"):
             board = obj
+            
+        # Attributes for task
+        elif hasattr(obj, "board"):
+            board = obj.board
+            
+        # Attributes for comment
+        elif hasattr(obj, "task") and hasattr(obj.task, "board"):
+            board = obj.task.board
+        else:
+            raise AuthenticationFailed(self.message)
 
         if board.owner == request.user or request.user in board.members.all():
             return True
