@@ -65,12 +65,7 @@ class TaskSerializer(serializers.ModelSerializer):
 
 class BoardListSerializer(serializers.ModelSerializer):
     owner_id = serializers.ReadOnlyField(source="owner.id")
-    members = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=User.objects.all(),
-        required=False,
-        write_only=True  # nur beim POST verwenden, nicht in der Response anzeigen
-    )
+    members = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.all(), required=False, write_only=True)
     member_count = serializers.SerializerMethodField()
     ticket_count = serializers.SerializerMethodField()
     tasks_to_do_count = serializers.SerializerMethodField()
@@ -118,10 +113,7 @@ class TaskCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Task
-        fields = [
-            "id", "board", "title", "description", "status", "priority",
-            "assignee_id", "reviewer_id", "due_date"
-        ]
+        fields = ["id", "board", "title", "description", "status", "priority", "assignee_id", "reviewer_id", "due_date"]
 
     def create(self, validated_data):
         assignee_id = validated_data.pop("assignee_id", None)
