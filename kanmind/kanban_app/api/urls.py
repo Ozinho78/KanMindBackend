@@ -1,3 +1,4 @@
+"""Contains all endpoints"""
 from django.urls import path
 from kanban_app.api.views import RegistrationUserView, EmailLoginView, BoardListCreateView, BoardDetailView, MailCheckView, TaskCreateView, TasksAssignedToMeView, TasksReviewedByMeView, TaskDetailView, TasksInvolvedView, CommentsListCreateView, CommentDeleteView
 

@@ -3,6 +3,7 @@ from django.db import models
 
 
 class RegistrationUserModel(models.Model):
+    """Model for user registration"""
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     fullname = models.CharField(max_length=100)
 
@@ -11,6 +12,7 @@ class RegistrationUserModel(models.Model):
     
 
 class Board(models.Model):
+    """Model for board"""
     title = models.CharField(max_length=50)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="owned_boards")
     members = models.ManyToManyField(User, related_name="member_boards", blank=True)
@@ -20,6 +22,7 @@ class Board(models.Model):
 
 
 class Task(models.Model):
+    """Model for task with predefined choices"""
     STATUS_CHOICES = [("to-do", "To Do"), ("in-progress", "In Progress"), ("review", "Review"), ("done", "Done"),]
     PRIORITY_CHOICES = [("low", "Low"), ("medium", "Medium"), ("high", "High"),]
 
@@ -41,6 +44,7 @@ class Task(models.Model):
     
     
 class Comment(models.Model):
+    """Model for comment"""
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="comments")
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.CharField(max_length=600)

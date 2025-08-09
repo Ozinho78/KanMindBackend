@@ -53,10 +53,6 @@ class RegistrationUserView(generics.CreateAPIView):
             """Create token"""
             token, created = Token.objects.get_or_create(user=user)
 
-            # if not created:
-            #     error_message = {"token": "Ein Token für diesen Benutzer existiert bereits."}
-            #     return Response(error_message, status=status.HTTP_409_CONFLICT)
-
             return Response(
                 {
                     "token": token.key,
@@ -83,9 +79,6 @@ class EmailLoginView(APIView):
             account = serializer.validated_data["user"]
 
             """Request Token or create Token"""
-            # token = Token.objects.filter(user=account).first()
-            # if not token:
-            #     return Response({"error": "Kein Token vorhanden."}, status=status.HTTP_409_CONFLICT)
             token, created = Token.objects.get_or_create(user=account)
 
             return Response(

@@ -4,6 +4,7 @@ from django.contrib.auth import authenticate
 from kanban_app.models import Board, Task, Comment
 
 class RegistrationUserSerializer(serializers.ModelSerializer):
+    """"""
     class Meta:
         model = User
         fields = ["email", "password", "first_name", "last_name"]
