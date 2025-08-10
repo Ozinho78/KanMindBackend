@@ -16,17 +16,68 @@ class UserShortSerializer(serializers.ModelSerializer):
 
 
 class TaskSerializer(serializers.ModelSerializer):
-    """Serializes task"""
+    """Serializes task, read-only"""
     assignee = UserShortSerializer(read_only=True, allow_null=True)
     reviewer = UserShortSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = Task
         fields = ["id", "title", "description", "status", "priority", "assignee", "reviewer", "due_date"]
+        
+        
+class TaskWriteSerializer(serializers.ModelSerializer):
+    """Serializes and validates new and updated task"""
+    board = serializers.PrimaryKeyRelatedField(queryset=Board.objects.all())
+    assignee_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    reviewer_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+
+    class Meta:
+        model = Task
+        fields = ["id", "board", "title", "description", "status", "priority", "assignee_id", "reviewer_id", "due_date"]
+
+    def _get_allowed_user_ids(self, board: Board):
+        return list(board.members.values_list("id", flat=True)) + [board.owner_id]
+
+    def validate(self, attrs):
+        board = attrs.get("board") or getattr(self.instance, "board", None)
+        if board is None:
+            raise serializers.ValidationError({"board": "Dieses Feld wird benötigt."})
+
+        allowed = set(self._get_allowed_user_ids(board))
+
+        assignee_id = attrs.pop("assignee_id", None)
+        reviewer_id = attrs.pop("reviewer_id", None)
+
+        errors = {}
+        if assignee_id is not None:
+            if assignee_id not in allowed:
+                errors["assignee_id"] = "Assignee ist kein Mitglied dieses Boards."
+            else:
+                attrs["assignee"] = User.objects.filter(id=assignee_id).first()
+
+        if reviewer_id is not None:
+            if reviewer_id not in allowed:
+                errors["reviewer_id"] = "Reviewer ist kein Mitglied dieses Boards."
+            else:
+                attrs["reviewer"] = User.objects.filter(id=reviewer_id).first()
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return attrs
+
+    def create(self, validated_data):
+        return Task.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        instance.save()
+        return instance
 
 
 class BoardListSerializer(serializers.ModelSerializer):
-    """Serializes board list"""
+    """Serializes and validates board list"""
     owner_id = serializers.ReadOnlyField(source="owner.id")
     members = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.all(), required=False, write_only=True)
     member_count = serializers.SerializerMethodField()
@@ -59,7 +110,7 @@ class BoardListSerializer(serializers.ModelSerializer):
 
 
 class BoardDetailSerializer(serializers.ModelSerializer):
-    """Serializes board detail"""
+    """Serializes and validates board detail"""
     owner_data = UserShortSerializer(source="owner", read_only=True)
     members = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, write_only=True)
     members_data = UserShortSerializer(source="members", many=True, read_only=True)
@@ -71,29 +122,32 @@ class BoardDetailSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "owner_data", "members_data", "tasks"]
 
 
-class TaskCreateSerializer(serializers.ModelSerializer):
-    """Serializes task creation"""
-    assignee_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
-    reviewer_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+class CommentCreateSerializer(serializers.ModelSerializer):
+    """Serializes and validates comment creation"""
+    author = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
-        model = Task
-        fields = ["id", "board", "title", "description", "status", "priority", "assignee_id", "reviewer_id", "due_date"]
+        model = Comment
+        fields = ["id", "created_at", "author", "content"]
+
+    def get_author(self, obj):
+        fullname = f"{obj.author.first_name} {obj.author.last_name}".strip()
+        return fullname or obj.author.username or obj.author.email
+
+    def validate_content(self, value):
+        value = (value or "").strip()
+        if not value:
+            raise serializers.ValidationError("Darf nicht leer sein.")
+        return value
 
     def create(self, validated_data):
-        assignee_id = validated_data.pop("assignee_id", None)
-        reviewer_id = validated_data.pop("reviewer_id", None)
+        request = self.context["request"]
+        task = self.context["task"]
+        return Comment.objects.create(task=task, author=request.user, **validated_data)
 
-        if assignee_id:
-            validated_data["assignee"] = User.objects.filter(id=assignee_id).first()
-        if reviewer_id:
-            validated_data["reviewer"] = User.objects.filter(id=reviewer_id).first()
 
-        return Task.objects.create(**validated_data)
-    
-    
 class CommentSerializer(serializers.ModelSerializer):
-    """Serializes comment creation"""
+    """Serializes and validates comment, read-only"""
     author = serializers.SerializerMethodField()
 
     class Meta:
