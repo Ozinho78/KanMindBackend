@@ -30,7 +30,7 @@ It offers endpoints for creating, reading, updating and deleting (CRUD) boards, 
 
 ### 1. Clone the repository
 ```bash
-https://github.com/Ozinho78/KanMindBackend
+git clone https://github.com/Ozinho78/KanMindBackend
 cd KanMindBackend
 
 
