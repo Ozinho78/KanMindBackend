@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from auth_app.api.serializers import RegistrationUserSerializer, MailLoginSerializer
 from kanban_app.api.serializers import UserShortSerializer
-from core.utils.validators import validate_email_format, validate_email_unique, validate_fullname, validate_password_strength
+from core.utils.validators import validate_email_format
 from core.utils.exceptions import exception_handler_status500
 
 
@@ -16,51 +16,25 @@ class RegistrationUserView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         try:
-            fullname = request.data.get("fullname", "").strip()
-            email = request.data.get("email", "").strip()
-            password = request.data.get("password", "")
-            repeated_password = request.data.get("repeated_password", "")
-
-            """Validations from validators.py"""
-            validate_fullname(fullname)
-            validate_email_format(email)
-            validate_email_unique(email)
-
-            if password != repeated_password:
-                error_message = {
-                    "password": "Passwörter stimmen nicht überein."}
-                return Response(error_message, status=status.HTTP_400_BAD_REQUEST)
-
-            validate_password_strength(password)
-
-            """Splitting fullname"""
-            first_name, last_name = fullname.split(" ", 1)
-
-            """Save user"""
-            serializer = self.get_serializer(data={
-                "email": email,
-                "password": password,
-                "first_name": first_name,
-                "last_name": last_name
-            })
+            serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             user = serializer.save()
 
-            """Create token"""
-            token, created = Token.objects.get_or_create(user=user)
+            """Token creation"""
+            from rest_framework.authtoken.models import Token
+            token, created = Token.objects.get_or_create(user=account)
 
             return Response(
                 {
                     "token": token.key,
-                    "fullname": f"{first_name} {last_name}",
+                    "fullname": f"{user.first_name} {user.last_name}",
                     "email": user.email,
-                    "user_id": user.id
+                    "user_id": user.id,
                 },
-                status=status.HTTP_201_CREATED
+                status=status.HTTP_201_CREATED,
             )
-
-        except:
-            exception_handler_status500()
+        except Exception:
+            return exception_handler_status500()
 
 
 class MailLoginView(APIView):
