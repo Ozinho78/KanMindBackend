@@ -30,8 +30,8 @@ Es basiert auf **Django** und dem **Django REST Framework** und bietet API-Endpu
 
 ### 1. Repository klonen
 ```bash
-git clone https://github.com/<dein-benutzername>/<dein-repo>.git
-cd <dein-repo>
+https://github.com/Ozinho78/KanMindBackend
+cd KanMindBackend
 
 
 2. Virtuelle Umgebung erstellen & aktivieren
