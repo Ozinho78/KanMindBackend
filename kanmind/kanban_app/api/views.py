@@ -27,8 +27,8 @@ class BoardListCreateView(UserBoardsQuerysetMixin, generics.ListCreateAPIView):
     def perform_create(self, serializer):
         try:
             serializer.save(owner=self.request.user)
-        except:
-            exception_handler_status500()
+        except Exception as e:
+            return exception_handler_status500(e, self.get_exception_handler_context())
 
 
 class BoardDetailView(UserBoardsQuerysetMixin, generics.RetrieveUpdateDestroyAPIView):
@@ -44,8 +44,8 @@ class BoardDetailView(UserBoardsQuerysetMixin, generics.RetrieveUpdateDestroyAPI
 
         except Board.DoesNotExist:
             return Response({"error": "Board nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
-        except:
-            return exception_handler_status500()
+        except Exception as e:
+            return exception_handler_status500(e, self.get_exception_handler_context())
 
 
 class TaskCreateView(generics.CreateAPIView):
@@ -90,8 +90,8 @@ class TaskCreateView(generics.CreateAPIView):
             except:
                 return Response({"error": "Fehler beim Serialisieren des Tasks"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        except:
-            return exception_handler_status500()
+        except Exception as e:
+            return exception_handler_status500(e, self.get_exception_handler_context())
 
 
 class TasksAssignedToMeView(generics.ListAPIView):

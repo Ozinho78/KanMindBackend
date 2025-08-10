@@ -18,23 +18,22 @@ class RegistrationUserView(generics.CreateAPIView):
         try:
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            user = serializer.save()
+            account = serializer.save()
 
             """Token creation"""
-            from rest_framework.authtoken.models import Token
             token, created = Token.objects.get_or_create(user=account)
 
             return Response(
                 {
                     "token": token.key,
-                    "fullname": f"{user.first_name} {user.last_name}",
-                    "email": user.email,
-                    "user_id": user.id,
+                    "fullname": f"{account.first_name} {account.last_name}",
+                    "email": account.email,
+                    "user_id": account.id,
                 },
                 status=status.HTTP_201_CREATED,
             )
-        except Exception:
-            return exception_handler_status500()
+        except Exception as e:
+            return exception_handler_status500(e, self.get_exception_handler_context())
 
 
 class MailLoginView(APIView):
@@ -60,8 +59,8 @@ class MailLoginView(APIView):
                 },
                 status=status.HTTP_200_OK
             )
-        except:
-            exception_handler_status500()
+        except Exception as e:
+            return exception_handler_status500(e, self.get_exception_handler_context())
             
             
 class MailCheckView(APIView):
@@ -83,5 +82,5 @@ class MailCheckView(APIView):
                 return Response(serializer.data, status=status.HTTP_200_OK)
             except User.DoesNotExist:
                 return Response({"error": "E-Mail nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
-        except:
-            return exception_handler_status500()
+        except Exception as e:
+            return exception_handler_status500(e, self.get_exception_handler_context())
