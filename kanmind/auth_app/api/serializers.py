@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 
 class RegistrationUserSerializer(serializers.ModelSerializer):
-    """"""
+    """Serializes user registration data"""
     class Meta:
         model = User
         fields = ["email", "password", "first_name", "last_name"]
@@ -25,6 +25,7 @@ class RegistrationUserSerializer(serializers.ModelSerializer):
 
 
 class MailLoginSerializer(serializers.Serializer):
+    """Serializes mail login data"""
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
 

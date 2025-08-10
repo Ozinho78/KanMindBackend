@@ -1,6 +1,7 @@
 from rest_framework.permissions import BasePermission
 from rest_framework.exceptions import AuthenticationFailed
 
+
 class IsBoardOwnerOrMember(BasePermission):
     """Allows access only for owner or members"""
     message = "Kein Zugriff auf dieses Board."

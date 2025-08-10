@@ -1,5 +1,6 @@
+"""Contains registrations and login urls and an additional mail check with query params"""
 from django.urls import path
-from .views import RegistrationUserView, MailLoginView, MailCheckView
+from auth_app.api.views import RegistrationUserView, MailLoginView, MailCheckView
 
 
 urlpatterns = [
