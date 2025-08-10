@@ -11,6 +11,7 @@ from kanban_app.api.permissions import IsBoardOwnerOrMember
 
 
 class BoardListCreateView(UserBoardsQuerysetMixin, generics.ListCreateAPIView):
+    """View for listing and creating boards"""
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = BoardListSerializer
 
@@ -31,6 +32,7 @@ class BoardListCreateView(UserBoardsQuerysetMixin, generics.ListCreateAPIView):
 
 
 class BoardDetailView(UserBoardsQuerysetMixin, generics.RetrieveUpdateDestroyAPIView):
+    """View to get, update or delete a board"""
     permission_classes = [permissions.IsAuthenticated, IsBoardOwnerOrMember]
     serializer_class = BoardDetailSerializer
 
@@ -47,6 +49,7 @@ class BoardDetailView(UserBoardsQuerysetMixin, generics.RetrieveUpdateDestroyAPI
 
 
 class TaskCreateView(generics.CreateAPIView):
+    """View to create a new task"""
     queryset = Task.objects.all()
     serializer_class = TaskCreateSerializer
     permission_classes = [permissions.IsAuthenticated, IsBoardOwnerOrMember]
@@ -77,8 +80,7 @@ class TaskCreateView(generics.CreateAPIView):
             if errors:
                 return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
-            serializer = self.get_serializer(
-                data=request.data, context={"request": request})
+            serializer = self.get_serializer(data=request.data, context={"request": request})
             serializer.is_valid(raise_exception=True)
             task = serializer.save()
 
@@ -93,6 +95,7 @@ class TaskCreateView(generics.CreateAPIView):
 
 
 class TasksAssignedToMeView(generics.ListAPIView):
+    """View to get all tasks assigned to the current user"""
     serializer_class = TaskSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -109,6 +112,7 @@ class TasksAssignedToMeView(generics.ListAPIView):
 
 
 class TasksReviewedByMeView(generics.ListAPIView):
+    """View to get all tasks reviewed by the current user"""
     serializer_class = TaskSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -125,6 +129,7 @@ class TasksReviewedByMeView(generics.ListAPIView):
 
 
 class TasksInvolvedView(generics.ListAPIView):
+    """View to get all tasks that the user is involved in"""
     serializer_class = TaskSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -144,6 +149,7 @@ class TasksInvolvedView(generics.ListAPIView):
 
 
 class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """View for retrieving, updating and deleting a task"""
     queryset = Task.objects.all()
     serializer_class = TaskCreateSerializer
     permission_classes = [permissions.IsAuthenticated, IsBoardOwnerOrMember]
@@ -196,8 +202,7 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class CommentsListCreateView(APIView):
-    """
-    """
+    """View for creating and listing comments"""
     permission_classes = [permissions.IsAuthenticated, IsBoardOwnerOrMember]
 
     def get_task(self, task_id):
@@ -232,7 +237,7 @@ class CommentsListCreateView(APIView):
 
 
 class CommentDeleteView(APIView):
-    """"""
+    """Creates view for deleting a comment without GET"""
     permission_classes = [permissions.IsAuthenticated]
 
     def delete(self, request, task_id, comment_id, *args, **kwargs):
@@ -255,4 +260,3 @@ class CommentDeleteView(APIView):
         
         except Exception as exc:
             return exception_handler_status500(exc, context=None)
-

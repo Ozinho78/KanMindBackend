@@ -4,6 +4,7 @@ from kanban_app.models import Board, Task, Comment
 
 
 class UserShortSerializer(serializers.ModelSerializer):
+    """Serializes user with full name"""
     fullname = serializers.SerializerMethodField()
 
     class Meta:
@@ -15,6 +16,7 @@ class UserShortSerializer(serializers.ModelSerializer):
 
 
 class TaskSerializer(serializers.ModelSerializer):
+    """Serializes task"""
     assignee = UserShortSerializer(read_only=True, allow_null=True)
     reviewer = UserShortSerializer(read_only=True, allow_null=True)
 
@@ -24,6 +26,7 @@ class TaskSerializer(serializers.ModelSerializer):
 
 
 class BoardListSerializer(serializers.ModelSerializer):
+    """Serializes board list"""
     owner_id = serializers.ReadOnlyField(source="owner.id")
     members = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.all(), required=False, write_only=True)
     member_count = serializers.SerializerMethodField()
@@ -56,6 +59,7 @@ class BoardListSerializer(serializers.ModelSerializer):
 
 
 class BoardDetailSerializer(serializers.ModelSerializer):
+    """Serializes board detail"""
     owner_data = UserShortSerializer(source="owner", read_only=True)
     members = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, write_only=True)
     members_data = UserShortSerializer(source="members", many=True, read_only=True)
@@ -68,6 +72,7 @@ class BoardDetailSerializer(serializers.ModelSerializer):
 
 
 class TaskCreateSerializer(serializers.ModelSerializer):
+    """Serializes task creation"""
     assignee_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     reviewer_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
 
@@ -88,6 +93,7 @@ class TaskCreateSerializer(serializers.ModelSerializer):
     
     
 class CommentSerializer(serializers.ModelSerializer):
+    """Serializes comment creation"""
     author = serializers.SerializerMethodField()
 
     class Meta:
@@ -97,4 +103,3 @@ class CommentSerializer(serializers.ModelSerializer):
     def get_author(self, obj):
         fullname = f"{obj.author.first_name} {obj.author.last_name}".strip()
         return fullname or obj.author.username or obj.author.email
-
