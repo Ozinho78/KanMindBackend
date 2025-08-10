@@ -90,6 +90,7 @@ db.sqlite3
 up.bat
 
 Infos/
+Tests/
 KanMindFrontend/
 sources/
 kanmind/generate_dummy_data.py
