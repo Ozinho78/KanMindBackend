@@ -1,40 +1,40 @@
 # Backend Project for Kanban-App with Django REST Framework (DRF)
 
-Dieses Projekt ist das **Backend** für die KanMind Webanwendung – ein einfaches, aber funktionsreiches Kanban-Board-System.  
-Es basiert auf **Django** und dem **Django REST Framework** und bietet API-Endpunkte für Benutzerregistrierung, Login, Board- und Task-Verwaltung.
+This project is the backend for a Kanban-App, built with Django and Django REST Framework (DRF).
+It offers endpoints for creating, reading, updating and deleting (CRUD) boards, lists, cards and comments.
 
----
+-------------------------------------------------------------------------------------------------------------
 
 ## Features
 
-- Benutzerregistrierung und Login (Token-Authentifizierung)
-- Boards erstellen, bearbeiten, löschen
-- Mitglieder zu Boards hinzufügen
-- Tasks erstellen, bearbeiten, löschen
-- Aufgaben mit Assignee & Reviewer
-- Aufgaben nach Status und Priorität filtern
-- Kommentare zu Tasks hinzufügen/löschen
+- User authentication and authorization, using Django's built-in authentication system.
+- Board creation, reading, updating and deletion.
+- Adding members to a board.
+- Task creation, reading, updating and deletion.
+- Tasks contain assignee and reviewer.
+- Filtering and sorting of tasks by assignee, reviewer, status and priority.
+- Adding comments to tasks.
 
----
+-------------------------------------------------------------------------------------------------------------
 
-## Technologie-Stack
+## Technology Stack
 
 - [Django](https://www.djangoproject.com/) 5.x
 - [Django REST Framework](https://www.django-rest-framework.org/)
-- SQLite (Standard, leicht austauschbar gegen PostgreSQL/MySQL)
+- SQLite as the database.
 - Token Authentication
 
----
+-------------------------------------------------------------------------------------------------------------
 
 ## Installation
 
-### 1. Repository klonen
+### 1. Clone the repository
 ```bash
 https://github.com/Ozinho78/KanMindBackend
 cd KanMindBackend
 
 
-2. Virtuelle Umgebung erstellen & aktivieren
+2. Create a virtual environment
 python -m venv venv
 # Windows:
 venv\Scripts\activate
@@ -42,17 +42,18 @@ venv\Scripts\activate
 source venv/bin/activate
 
 
-3. Abhängigkeiten installieren
+3. Install dependencies
 pip install -r requirements.txt
 
 
-4. Datenbankmigrationen ausführen
+4. Run database migrations
+python manage.py makemigrations
 python manage.py migrate
 
 
-5. Superuser anlegen (optional)
+5. Creating a superuser
 python manage.py createsuperuser
 
 
-6. Server starten
+6. Run the server
 python manage.py runserver
