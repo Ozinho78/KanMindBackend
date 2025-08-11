@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from core.utils.exceptions import exception_handler_status500
 from kanban_app.models import Board, Task, Comment
-from kanban_app.api.serializers import BoardListSerializer, BoardDetailSerializer, TaskSerializer, TaskWriteSerializer, CommentSerializer, CommentCreateSerializer, BoardUpdateSerializer
+from kanban_app.api.serializers import BoardListSerializer, BoardDetailSerializer, TaskSerializer, TaskWriteSerializer, CommentSerializer, CommentCreateSerializer, BoardUpdateSerializer, UserShortSerializer
 from kanban_app.api.mixins import UserBoardsQuerysetMixin
 from kanban_app.api.permissions import IsBoardOwnerOrMember
 
@@ -138,23 +138,49 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
         return TaskSerializer
 
     def patch(self, request, *args, **kwargs):
+        """Sparse PATCH: only show send fields; assignee/reviewer shown as user object"""
         try:
-            kwargs["partial"] = True
+            instance = self.get_object()
             write_serializer = TaskWriteSerializer(
-                self.get_object(),
+                instance,
                 data=request.data,
                 partial=True,
                 context=self.get_serializer_context(),
             )
             write_serializer.is_valid(raise_exception=True)
             task = write_serializer.save()
-            return Response(TaskSerializer(task).data, status=status.HTTP_200_OK)
+
+            sent = set(request.data.keys())
+            resp = {}
+            
+            """first response-field is id"""
+            resp.setdefault("id", task.id)
+
+            for field in ("title", "description", "status", "priority", "due_date"):
+                if field in sent:
+                    resp[field] = getattr(task, field)
+
+            if "assignee_id" in sent:
+                resp["assignee"] = (
+                    UserShortSerializer(task.assignee).data if task.assignee else None
+                )
+            if "reviewer_id" in sent:
+                resp["reviewer"] = (
+                    UserShortSerializer(task.reviewer).data if task.reviewer else None
+                )
+
+            return Response(resp, status=status.HTTP_200_OK)
         except Exception as exc:
             return exception_handler_status500(exc, context=None)
 
     def put(self, request, *args, **kwargs):
+        """PUT stays as complete response"""
         try:
-            write_serializer = TaskWriteSerializer(self.get_object(), data=request.data, context=self.get_serializer_context(),)
+            write_serializer = TaskWriteSerializer(
+                self.get_object(),
+                data=request.data,
+                context=self.get_serializer_context(),
+            )
             write_serializer.is_valid(raise_exception=True)
             task = write_serializer.save()
             return Response(TaskSerializer(task).data, status=status.HTTP_200_OK)
