@@ -31,6 +31,25 @@ class TaskAdminForm(forms.ModelForm):
             if reviewer and reviewer.id not in allowed_ids:
                 self.add_error("reviewer", "Reviewer ist kein Mitglied/Owner dieses Boards.")
         return cleaned
+    
+    
+class CommentAdminForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        fields = "__all__"
+
+    def clean(self):
+        cleaned = super().clean()
+        task = cleaned.get("task") or getattr(self.instance, "task", None)
+        author = cleaned.get("author")
+
+        if task and author:
+            board = getattr(task, "board", None)
+            if board:
+                allowed_ids = set(board.members.values_list("id", flat=True)) | {board.owner_id}
+                if author.id not in allowed_ids:
+                    self.add_error("author", "Autor ist kein Mitglied/Owner dieses Boards.")
+        return cleaned
 
 
 class TaskInlineFormSet(BaseInlineFormSet):
@@ -54,6 +73,25 @@ class TaskInlineFormSet(BaseInlineFormSet):
                 form.add_error("assignee", "Assignee ist kein Mitglied/Owner dieses Boards.")
             if reviewer and reviewer.id not in allowed_ids:
                 form.add_error("reviewer", "Reviewer ist kein Mitglied/Owner dieses Boards.")
+
+
+class CommentInlineFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        task = self.instance            # Parent-Objekt = Task
+        board = getattr(task, "board", None)
+        if not board:
+            return
+
+        allowed_ids = set(board.members.values_list("id", flat=True)) | {board.owner_id}
+        for form in self.forms:
+            if not hasattr(form, "cleaned_data"):
+                continue
+            if form.cleaned_data.get("DELETE", False):
+                continue
+            author = form.cleaned_data.get("author")
+            if author and author.id not in allowed_ids:
+                form.add_error("author", "Autor ist kein Mitglied/Owner dieses Boards.")
 
 
 class TaskInline(admin.TabularInline):
@@ -85,6 +123,24 @@ class CommentInline(admin.TabularInline):
     fields = ("author", "content", "created_at")
     readonly_fields = ("created_at",)
     autocomplete_fields = ("author",)
+
+    # NEU:
+    formset = CommentInlineFormSet
+    form = CommentAdminForm
+
+    def get_formset(self, request, obj=None, **kwargs):
+        self._parent_task = obj
+        return super().get_formset(request, obj, **kwargs)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "author":
+            task = getattr(self, "_parent_task", None)
+            if task and getattr(task, "board", None):
+                User = get_user_model()
+                board = task.board
+                allowed_ids = set(board.members.values_list("id", flat=True)) | {board.owner_id}
+                kwargs["queryset"] = User.objects.filter(id__in=allowed_ids)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(Board)
@@ -156,6 +212,7 @@ class TaskAdmin(admin.ModelAdmin):
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
+    form = CommentAdminForm
     list_display = ("id", "task", "author", "created_at", "short_content")
     list_filter = ("created_at", "author")
     search_fields = ("content", "task__title", "author__username", "author__email")
