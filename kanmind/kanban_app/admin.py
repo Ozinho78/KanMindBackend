@@ -37,9 +37,8 @@ class TaskInlineFormSet(BaseInlineFormSet):
     def clean(self):
         super().clean()
         board = self.instance
-        if not board or not hasattr(board, "members"):
+        if not board:
             return
-
         allowed_ids = set(board.members.values_list("id", flat=True)) | {board.owner_id}
 
         for form in self.forms:
@@ -47,6 +46,7 @@ class TaskInlineFormSet(BaseInlineFormSet):
                 continue
             if form.cleaned_data.get("DELETE", False):
                 continue
+
             assignee = form.cleaned_data.get("assignee")
             reviewer = form.cleaned_data.get("reviewer")
 
@@ -63,6 +63,21 @@ class TaskInline(admin.TabularInline):
     autocomplete_fields = ("assignee", "reviewer")
     formset = TaskInlineFormSet
     form = TaskAdminForm
+
+    def get_formset(self, request, obj=None, **kwargs):
+        self._parent_board = obj
+        return super().get_formset(request, obj, **kwargs)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name in ("assignee", "reviewer"):
+            board = getattr(self, "_parent_board", None)
+            if board:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                allowed_ids = set(board.members.values_list("id", flat=True)) | {board.owner_id}
+                kwargs["queryset"] = User.objects.filter(id__in=allowed_ids)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 class CommentInline(admin.TabularInline):
     model = Comment
