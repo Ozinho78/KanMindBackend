@@ -23,14 +23,12 @@ class UserShortSerializer(serializers.ModelSerializer):
 class TaskSerializer(serializers.ModelSerializer):
     assignee = UserShortSerializer(read_only=True, allow_null=True)
     reviewer = UserShortSerializer(read_only=True, allow_null=True)
-    comments_count = serializers.IntegerField(read_only=True)
+    comments_count = serializers.ReadOnlyField()  # falls du es in der Ausgabe willst
 
     class Meta:
         model = Task
-        fields = [
-            "id", "title", "description", "status", "priority",
-            "assignee", "reviewer", "due_date", "comments_count"
-        ]
+        fields = ["id", "title", "description", "status", "priority",
+                  "assignee", "reviewer", "due_date", "comments_count"]
         
 
 class TaskInBoardSerializer(serializers.ModelSerializer):
@@ -62,7 +60,8 @@ class TaskWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Task
-        fields = ["id", "board", "title", "description", "status", "priority", "assignee_id", "reviewer_id", "due_date"]
+        fields = ["id", "board", "title", "description", "status", "priority",
+                  "assignee_id", "reviewer_id", "due_date"]
 
     def _get_allowed_user_ids(self, board: Board):
         return list(board.members.values_list("id", flat=True)) + [board.owner_id]
@@ -74,18 +73,23 @@ class TaskWriteSerializer(serializers.ModelSerializer):
 
         allowed = set(self._get_allowed_user_ids(board))
 
-        assignee_id = attrs.pop("assignee_id", None)
-        reviewer_id = attrs.pop("reviewer_id", None)
+        assignee_id = attrs.pop("assignee_id", serializers.empty)
+        reviewer_id = attrs.pop("reviewer_id", serializers.empty)
 
         errors = {}
-        if assignee_id is not None:
-            if assignee_id not in allowed:
+
+        if assignee_id is not serializers.empty:
+            if assignee_id is None:
+                attrs["assignee"] = None
+            elif assignee_id not in allowed:
                 errors["assignee_id"] = "Assignee ist kein Mitglied dieses Boards."
             else:
                 attrs["assignee"] = User.objects.filter(id=assignee_id).first()
 
-        if reviewer_id is not None:
-            if reviewer_id not in allowed:
+        if reviewer_id is not serializers.empty:
+            if reviewer_id is None:
+                attrs["reviewer"] = None
+            elif reviewer_id not in allowed:
                 errors["reviewer_id"] = "Reviewer ist kein Mitglied dieses Boards."
             else:
                 attrs["reviewer"] = User.objects.filter(id=reviewer_id).first()
