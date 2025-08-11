@@ -23,7 +23,7 @@ class UserShortSerializer(serializers.ModelSerializer):
 class TaskSerializer(serializers.ModelSerializer):
     assignee = UserShortSerializer(read_only=True, allow_null=True)
     reviewer = UserShortSerializer(read_only=True, allow_null=True)
-    comments_count = serializers.ReadOnlyField()  # falls du es in der Ausgabe willst
+    comments_count = serializers.ReadOnlyField()
 
     class Meta:
         model = Task
@@ -34,14 +34,11 @@ class TaskSerializer(serializers.ModelSerializer):
 class TaskInBoardSerializer(serializers.ModelSerializer):
     assignee = UserMiniSerializer(read_only=True)
     reviewer = UserMiniSerializer(read_only=True)
-    # robust: nutzt Annotation, fällt sonst auf Property zurück
     comments_count = serializers.SerializerMethodField()
 
     def get_comments_count(self, obj):
-        # bevorzugt Annotation
         if hasattr(obj, "num_comments") and obj.num_comments is not None:
             return obj.num_comments
-        # fallback: Property (z.B. wenn View mal nicht annotiert)
         return getattr(obj, "comments_count", 0)
 
     class Meta:
@@ -145,15 +142,41 @@ class BoardListSerializer(serializers.ModelSerializer):
 class BoardDetailSerializer(serializers.ModelSerializer):
     """Serializes and validates board detail"""
     owner_id = serializers.ReadOnlyField(source="owner.id")
-    # members = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, write_only=True)
     members = UserShortSerializer(many=True, read_only=True)
     tasks = TaskSerializer(many=True, read_only=True)
 
     class Meta:
         model = Board
         fields = ["id", "title", "owner_id", "members", "tasks"]
-        # fields = ["id", "title", "owner_data", "members", "members_data", "tasks"]
-        # read_only_fields = ["id", "owner_data", "members_data", "tasks"]
+        
+        
+class BoardUpdateSerializer(serializers.ModelSerializer):
+    """Serializes for PUT/PATCH in boards"""
+    owner_data = UserShortSerializer(source="owner", read_only=True)
+    members = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        many=True,
+        write_only=True,
+        required=False
+    )
+    members_data = UserShortSerializer(source="members", many=True, read_only=True)
+
+    class Meta:
+        model = Board
+        fields = ["id", "title", "owner_data", "members", "members_data"]
+        read_only_fields = ["id", "owner_data", "members_data"]
+
+    def update(self, instance, validated_data):
+        title = validated_data.get("title", None)
+        if title is not None:
+            instance.title = title
+            instance.save()
+
+        if "members" in validated_data:
+            members = validated_data.pop("members", [])
+            instance.members.set(members)
+
+        return instance
 
 
 class CommentCreateSerializer(serializers.ModelSerializer):

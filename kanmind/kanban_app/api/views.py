@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from core.utils.exceptions import exception_handler_status500
 from kanban_app.models import Board, Task, Comment
-from kanban_app.api.serializers import BoardListSerializer, BoardDetailSerializer, TaskSerializer, TaskWriteSerializer, CommentSerializer, CommentCreateSerializer
+from kanban_app.api.serializers import BoardListSerializer, BoardDetailSerializer, TaskSerializer, TaskWriteSerializer, CommentSerializer, CommentCreateSerializer, BoardUpdateSerializer
 from kanban_app.api.mixins import UserBoardsQuerysetMixin
 from kanban_app.api.permissions import IsBoardOwnerOrMember
 
@@ -46,6 +46,11 @@ class BoardDetailView(UserBoardsQuerysetMixin, generics.RetrieveUpdateDestroyAPI
             .prefetch_related("members")
             .prefetch_related(Prefetch("tasks", queryset=task_qs))
         )
+        
+    def get_serializer_class(self):
+        if self.request.method in ("PUT", "PATCH"):
+            return BoardUpdateSerializer
+        return BoardDetailSerializer
 
     def get_object(self):
         board = super().get_object()
