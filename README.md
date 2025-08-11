@@ -32,28 +32,43 @@ It offers endpoints for creating, reading, updating and deleting (CRUD) boards, 
 ```bash
 git clone https://github.com/Ozinho78/KanMindBackend
 cd KanMindBackend
+```
 
 
-2. Create a virtual environment
+### 2. Create a virtual environment
+```bash
 python -m venv venv
-# Windows:
+```
+###### Windows:
+```bash
 venv\Scripts\activate
-# macOS/Linux:
+```
+###### macOS/Linux:
+```bash
 source venv/bin/activate
+```
 
 
-3. Install dependencies
+### 3. Install dependencies
+```bash
 pip install -r requirements.txt
+```
 
 
-4. Run database migrations
+### 4. Run database migrations
+```bash
 python manage.py makemigrations
 python manage.py migrate
+```
 
 
-5. Creating a superuser
+### 5. Creating a superuser
+```bash
 python manage.py createsuperuser
+```
 
 
-6. Run the server
+### 6. Run the server
+``` bash
 python manage.py runserver
+```
