@@ -1,3 +1,6 @@
+from django.db.models import Count
+from django.db.models.functions import Coalesce
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from rest_framework import generics, permissions, status
@@ -29,6 +32,20 @@ class BoardDetailView(UserBoardsQuerysetMixin, generics.RetrieveUpdateDestroyAPI
     """Reads, updates or deletes a board"""
     permission_classes = [permissions.IsAuthenticated, IsBoardOwnerOrMember]
     serializer_class = BoardDetailSerializer
+
+    def get_queryset(self):
+        task_qs = (
+            Task.objects
+            .select_related("assignee", "reviewer", "board")
+            .annotate(num_comments=Coalesce(Count("comments"), 0))
+        )
+        return (
+            super()
+            .get_queryset()
+            .select_related("owner")
+            .prefetch_related("members")
+            .prefetch_related(Prefetch("tasks", queryset=task_qs))
+        )
 
     def get_object(self):
         board = super().get_object()

@@ -1,28 +1,57 @@
-from rest_framework import serializers
 from django.contrib.auth.models import User
+from django.db.models.functions import Coalesce
+from rest_framework import serializers
 from kanban_app.models import Board, Task, Comment
+
+
+class UserMiniSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("id", "email", "fullname")
 
 
 class UserShortSerializer(serializers.ModelSerializer):
     """Serializes user with full name"""
     fullname = serializers.SerializerMethodField()
-
     class Meta:
         model = User
         fields = ["id", "email", "fullname"]
-
     def get_fullname(self, obj):
         return f"{obj.first_name} {obj.last_name}".strip()
 
 
 class TaskSerializer(serializers.ModelSerializer):
-    """Serializes task, read-only"""
     assignee = UserShortSerializer(read_only=True, allow_null=True)
     reviewer = UserShortSerializer(read_only=True, allow_null=True)
+    comments_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Task
-        fields = ["id", "title", "description", "status", "priority", "assignee", "reviewer", "due_date"]
+        fields = [
+            "id", "title", "description", "status", "priority",
+            "assignee", "reviewer", "due_date", "comments_count"
+        ]
+        
+
+class TaskInBoardSerializer(serializers.ModelSerializer):
+    assignee = UserMiniSerializer(read_only=True)
+    reviewer = UserMiniSerializer(read_only=True)
+    # robust: nutzt Annotation, fällt sonst auf Property zurück
+    comments_count = serializers.SerializerMethodField()
+
+    def get_comments_count(self, obj):
+        # bevorzugt Annotation
+        if hasattr(obj, "num_comments") and obj.num_comments is not None:
+            return obj.num_comments
+        # fallback: Property (z.B. wenn View mal nicht annotiert)
+        return getattr(obj, "comments_count", 0)
+
+    class Meta:
+        model = Task
+        fields = (
+            "id", "title", "description", "status", "priority",
+            "assignee", "reviewer", "due_date", "comments_count",
+        )
         
         
 class TaskWriteSerializer(serializers.ModelSerializer):
@@ -111,15 +140,16 @@ class BoardListSerializer(serializers.ModelSerializer):
 
 class BoardDetailSerializer(serializers.ModelSerializer):
     """Serializes and validates board detail"""
-    owner_data = UserShortSerializer(source="owner", read_only=True)
-    members = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, write_only=True)
-    members_data = UserShortSerializer(source="members", many=True, read_only=True)
+    owner_id = serializers.ReadOnlyField(source="owner.id")
+    # members = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, write_only=True)
+    members = UserShortSerializer(many=True, read_only=True)
     tasks = TaskSerializer(many=True, read_only=True)
 
     class Meta:
         model = Board
-        fields = ["id", "title", "owner_data", "members", "members_data", "tasks"]
-        read_only_fields = ["id", "owner_data", "members_data", "tasks"]
+        fields = ["id", "title", "owner_id", "members", "tasks"]
+        # fields = ["id", "title", "owner_data", "members", "members_data", "tasks"]
+        # read_only_fields = ["id", "owner_data", "members_data", "tasks"]
 
 
 class CommentCreateSerializer(serializers.ModelSerializer):
