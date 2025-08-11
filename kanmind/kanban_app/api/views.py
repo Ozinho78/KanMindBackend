@@ -212,6 +212,8 @@ class CommentsListCreateView(generics.ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         try:
+            task = self.get_task()
+            self.check_object_permissions(request, task)
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             obj = serializer.save()
