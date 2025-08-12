@@ -1,36 +1,33 @@
 from rest_framework.permissions import BasePermission
-from rest_framework.exceptions import AuthenticationFailed
-from rest_framework.exceptions import PermissionDenied
-
+from rest_framework.exceptions import NotAuthenticated, PermissionDenied
 
 class IsBoardOwnerOrMember(BasePermission):
     """Allows access only for owner or members"""
     message = "Kein Zugriff auf dieses Board."
 
+    def has_permission(self, request, view):
+        # if not logged in 401
+        if not request.user or not request.user.is_authenticated:
+            raise NotAuthenticated("Anmeldung erforderlich.")
+        return True
+
     def has_object_permission(self, request, view, obj):
-        """Attributes needs to be checked to avoid unwanted error messages"""
-        
-        # Determine board object (Board | Task | Comment)
-        # Attributes for board
+        # double check for direct request
+        if not request.user or not request.user.is_authenticated:
+            raise NotAuthenticated("Anmeldung erforderlich.")
+
+        # Determination of board (Board | Task | Comment)
         if hasattr(obj, "owner") and hasattr(obj, "members"):
             board = obj
-            
-        # Attributes for task
         elif hasattr(obj, "board"):
             board = obj.board
-            
-        # Attributes for comment
         elif hasattr(obj, "task") and hasattr(obj.task, "board"):
             board = obj.task.board
         else:
-            # raise AuthenticationFailed(self.message)
+            # object doesn't fit to the scheme → handle as missing permission 403
             raise PermissionDenied(self.message)
 
-        # Allow access if the user is the owner or member of the board
-        if board.owner == request.user or request.user in board.members.all():
+        # if logged in but not owner or member 403
+        if board.owner_id == request.user.id or request.user in board.members.all():
             return True
-
-        # Logged in but no access
-        # raise AuthenticationFailed(self.message)
-        # Why fail if you can deny someone
         raise PermissionDenied(self.message)
