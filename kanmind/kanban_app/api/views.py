@@ -28,10 +28,11 @@ class BoardListCreateView(UserBoardsQuerysetMixin, generics.ListCreateAPIView):
             return exception_handler_status500(exc, context=None)
 
 
-class BoardDetailView(UserBoardsQuerysetMixin, generics.RetrieveUpdateDestroyAPIView):
+class BoardDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Reads, updates or deletes a board"""
     permission_classes = [permissions.IsAuthenticated, IsBoardOwnerOrMember]
     serializer_class = BoardDetailSerializer
+    queryset = Board.objects.all()
 
     def get_queryset(self):
         task_qs = (
@@ -53,8 +54,8 @@ class BoardDetailView(UserBoardsQuerysetMixin, generics.RetrieveUpdateDestroyAPI
         return BoardDetailSerializer
 
     def get_object(self):
-        board = super().get_object()
-        self.check_object_permissions(self.request, board)
+        board = super().get_object()    # works with full queryset
+        self.check_object_permissions(self.request, board)  # forces 403 for foreign boards
         return board
 
     def destroy(self, request, *args, **kwargs):
