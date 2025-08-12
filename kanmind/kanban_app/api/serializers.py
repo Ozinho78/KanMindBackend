@@ -21,14 +21,25 @@ class UserShortSerializer(serializers.ModelSerializer):
 
 
 class TaskSerializer(serializers.ModelSerializer):
+    board = serializers.ReadOnlyField(source="board.id")
     assignee = UserShortSerializer(read_only=True, allow_null=True)
     reviewer = UserShortSerializer(read_only=True, allow_null=True)
     comments_count = serializers.ReadOnlyField()
 
     class Meta:
         model = Task
-        fields = ["id", "title", "description", "status", "priority",
-                  "assignee", "reviewer", "due_date", "comments_count"]
+        fields = [
+            "id",
+            "board",
+            "title",
+            "description",
+            "status",
+            "priority",
+            "assignee",
+            "reviewer",
+            "due_date",
+            "comments_count",
+        ]
         
 
 class TaskInBoardSerializer(serializers.ModelSerializer):
