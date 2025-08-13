@@ -54,9 +54,10 @@ class TaskInBoardSerializer(serializers.ModelSerializer):
     comments_count = serializers.SerializerMethodField()
 
     def get_comments_count(self, obj):
-        if hasattr(obj, "num_comments") and obj.num_comments is not None:
-            return obj.num_comments
-        return getattr(obj, "comments_count", 0)
+        val = getattr(obj, "comments_count", None)
+        if val is not None:
+            return int(val)
+        return obj.comments.count()
 
     class Meta:
         model = Task

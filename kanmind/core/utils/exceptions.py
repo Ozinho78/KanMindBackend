@@ -1,8 +1,6 @@
 from rest_framework.views import exception_handler
 from rest_framework.response import Response
 from rest_framework import status
-# from django.conf import settings
-# import traceback
 
 
 def exception_handler_status500(exc, context):
