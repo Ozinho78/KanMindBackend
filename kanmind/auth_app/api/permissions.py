@@ -9,15 +9,12 @@ class IsBoardOwnerOrMember(BasePermission):
     def has_object_permission(self, request, view, obj):
         """Attributes needs to be checked to avoid unwanted error messages"""
         
-        # Attributes for board
         if hasattr(obj, "owner") and hasattr(obj, "members"):
             board = obj
             
-        # Attributes for task
         elif hasattr(obj, "board"):
             board = obj.board
             
-        # Attributes for comment
         elif hasattr(obj, "task") and hasattr(obj.task, "board"):
             board = obj.task.board
         else:
