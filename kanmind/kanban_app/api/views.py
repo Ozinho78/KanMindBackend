@@ -54,8 +54,8 @@ class BoardDetailView(generics.RetrieveUpdateDestroyAPIView):
         return BoardDetailSerializer
 
     def get_object(self):
-        board = super().get_object()    # works with full queryset
-        self.check_object_permissions(self.request, board)  # forces 403 for foreign boards
+        board = super().get_object()
+        self.check_object_permissions(self.request, board)
         return board
 
     def destroy(self, request, *args, **kwargs):
@@ -116,15 +116,12 @@ class TaskCreateView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         try:
-            # checks if board exists before validation from serializer → 404 before 400
             board_id = request.data.get("board")
             if board_id is not None and not Board.objects.filter(pk=board_id).exists():
                 return Response({"detail": "Board not found."}, status=status.HTTP_404_NOT_FOUND)
 
-            # regular creation including permission check in perform_create
             response = super().create(request, *args, **kwargs)
 
-            # complete read response in return
             task = Task.objects.get(pk=response.data["id"])
             return Response(TaskSerializer(task).data, status=status.HTTP_201_CREATED)
         except Exception as exc:
