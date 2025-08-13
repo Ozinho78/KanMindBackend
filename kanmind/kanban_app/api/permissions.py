@@ -23,6 +23,9 @@ class IsBoardOwnerOrMember(BasePermission):
         else:
             raise PermissionDenied(self.message)
 
-        if board.owner_id == request.user.id or request.user in board.members.all():
+        is_owner = board.owner_id == request.user.id
+        is_member = board.members.filter(id=request.user.id).exists()
+        if is_owner or is_member:
             return True
+        
         raise PermissionDenied(self.message)

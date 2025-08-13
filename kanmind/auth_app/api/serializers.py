@@ -28,9 +28,6 @@ class RegistrationUserSerializer(serializers.ModelSerializer):
     def validate_fullname(self, value: str) -> str:
         fullname = (value or "").strip()
         validate_fullname(fullname)
-        parts = fullname.split()
-        if len(parts) < 2:
-            raise serializers.ValidationError("Bitte Vor- und Nachnamen angeben.")
         return fullname
 
     def validate(self, attrs: dict) -> dict:

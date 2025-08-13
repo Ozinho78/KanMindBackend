@@ -20,7 +20,9 @@ class IsBoardOwnerOrMember(BasePermission):
         else:
             raise AuthenticationFailed(self.message)
 
-        if board.owner == request.user or request.user in board.members.all():
+        is_owner = board.owner_id == request.user.id
+        is_member = board.members.filter(id=request.user.id).exists()
+        if is_owner or is_member:
             return True
 
         raise AuthenticationFailed(self.message)
