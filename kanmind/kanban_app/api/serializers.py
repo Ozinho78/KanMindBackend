@@ -24,7 +24,7 @@ class TaskSerializer(serializers.ModelSerializer):
     board = serializers.ReadOnlyField(source="board.id")
     assignee = UserShortSerializer(read_only=True, allow_null=True)
     reviewer = UserShortSerializer(read_only=True, allow_null=True)
-    comments_count = serializers.ReadOnlyField()
+    comments_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Task
@@ -40,6 +40,12 @@ class TaskSerializer(serializers.ModelSerializer):
             "due_date",
             "comments_count",
         ]
+        
+    def get_comments_count(self, obj):
+        val = getattr(obj, "comments_count", None)
+        if val is not None:
+            return val
+        return obj.comments.count()
         
 
 class TaskInBoardSerializer(serializers.ModelSerializer):

@@ -28,10 +28,6 @@ class Task(models.Model):
 
     def __str__(self):
         return self.title
-
-    @property
-    def comments_count(self):
-        return self.comments.count()
     
     
 class Comment(models.Model):
